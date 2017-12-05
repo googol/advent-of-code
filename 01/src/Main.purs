@@ -1,19 +1,18 @@
 module Main where
 
-import Prelude
+import Prelude (Unit, bind, map, otherwise, pure, show, (#), ($), (==))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Eff.Exception
-import Data.List
-import Data.Foldable (sum)
-import Data.Traversable
-import Data.Tuple
-import Data.String
-import Data.Maybe
-import Node.FS
-import Node.FS.Sync
-import Node.Encoding
-import Control.Bind
+import Control.Monad.Eff.Exception (EXCEPTION)
+import Data.List (List(..), fromFoldable, snoc, zip, (:))
+import Data.Traversable (sum)
+import Data.Tuple (Tuple(..))
+import Data.String (toCharArray)
+import Data.Maybe (Maybe(..))
+import Node.FS (FS)
+import Node.FS.Sync (readTextFile)
+import Node.Encoding (Encoding(..))
+import Control.Bind (bindFlipped)
 
 shiftByOne :: forall a. List a -> List a
 shiftByOne Nil = Nil
@@ -40,14 +39,11 @@ charToInt '8' = pure 8
 charToInt '9' = pure 9
 charToInt x = Nothing
 
-fromMaybe :: forall a. Maybe a -> List a
-fromMaybe = fromFoldable
-
-selectJusts :: forall a. List (Maybe a) -> List a
-selectJusts = bindFlipped fromMaybe
-
 parseInput :: String -> List Int
-parseInput x = toCharArray x # fromFoldable # map charToInt # selectJusts
+parseInput x = toCharArray x
+    # fromFoldable
+    # map charToInt
+    # bindFlipped fromFoldable
 
 main :: forall e. Eff (exception :: EXCEPTION, fs :: FS, console :: CONSOLE | e) Unit
 main = do
