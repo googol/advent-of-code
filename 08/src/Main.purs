@@ -7,7 +7,7 @@ import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.MonadZero (guard)
 import Data.List (List(..), filter, fromFoldable, head, snoc, zip, (:))
 import Data.Traversable (maximum, traverse, sequence, scanl)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), fst, snd)
 import Data.String (toCharArray, split, null, Pattern(..))
 import Data.Maybe (Maybe(..), fromMaybe, fromJust)
 import Data.Either (Either(..), either, fromRight, note, hush)
@@ -23,14 +23,15 @@ import Data.Array ((!!))
 import Data.Map
 import Data.Foldable
 
-runCommands :: List Command -> Map String Int
-runCommands = foldl commandStep empty
+runCommands :: List Command -> Tuple Int (Map String Int)
+runCommands = foldl commandStep (Tuple 0 empty)
     where
-          commandStep :: Map String Int -> Command -> Map String Int
-          commandStep registers command = fromMaybe registers $ do
+          commandStep :: Tuple Int (Map String Int) -> Command -> Tuple Int (Map String Int)
+          commandStep t@(Tuple highest registers) command = fromMaybe t $ do
              let registerValue = fromMaybe 0 $ lookup (getConditionRegister $ getCondition command) registers
              guard $ testCondition (getCondition command) registerValue
-             pure $ alter (applyCommand command) (getRegister command) registers
+             let newRegisters = alter (applyCommand command) (getRegister command) registers
+             pure $ Tuple (max highest $ getLargestValue newRegisters) newRegisters
 
 applyCommand :: Command -> Maybe Int -> Maybe Int
 applyCommand (Inc _ delta _) value = Just ((fromMaybe 0 value) + delta)
@@ -40,10 +41,10 @@ getLargestValue :: Map String Int -> Int
 getLargestValue map = fromMaybe 0 $ maximum $ values map
 
 solution :: List Command -> Int
-solution = getLargestValue <<< runCommands
+solution = getLargestValue <<< snd <<< runCommands
 
 solution2 :: List Command -> Int
-solution2 _ = 0
+solution2 = fst <<< runCommands
 
 lines :: String -> List String
 lines = filter (not <<< null) <<< fromFoldable <<< split (Pattern "\n")
@@ -120,3 +121,4 @@ main = do
     input <- readTextFile UTF8 "input" 
     let parsed = parseInput input
     either (\err -> log $ "Error: " <> err) (log <<< show <<< solution) parsed
+    either (\err -> log $ "Error: " <> err) (log <<< show <<< solution2) parsed
